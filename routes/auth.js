@@ -6,6 +6,11 @@ const pool = require("../db.js");
 require("dotenv").config();
 
 //Routes--------------------------------------------------------------------------------------------
+//GET /health - probe connection with server.
+router.get("/health", (req, res) => {
+   return res.status(200).json({status: "ok"});
+});
+
 //POST /auth/register
 router.post("/register", async (req, res) => {
     //get email and password from req and store them in variables "email" and "password"
