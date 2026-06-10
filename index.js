@@ -21,7 +21,7 @@ app.use(cors({
 
 //Routes----------------------------------------------------------------------
 //GET /health - probe connection with server.
-router.get("/health", (req, res) => {
+app.get("/health", (req, res) => {
    return res.status(200).json({status: "ok"});
 });
 
