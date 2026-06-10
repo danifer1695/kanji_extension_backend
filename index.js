@@ -22,14 +22,14 @@ app.use(cors({
 //Routes----------------------------------------------------------------------
 //GET /health - probe connection with server.
 app.get("/health", (req, res) => {
-   return res.status(200).json({status: "ok"});
+   res.status(200).json({status: "ok"});
 });
-
-//----------------------------------------------------------------------------
 
 //get the "/kanji" route so we can access the endpoints defined in kanji.js
 app.use("/auth", require("./routes/auth"));
 app.use("/kanji", require("./routes/kanji"));
+
+//----------------------------------------------------------------------------
 
 //get the port defined in dotenv or if that cannot be found, set it to 3000 by default
 const PORT = process.env.PORT || 3000;
