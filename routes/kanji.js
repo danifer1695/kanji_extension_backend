@@ -19,8 +19,8 @@ router.get("/", async (req, res) => {
             "SELECT * FROM saved_kanji WHERE user_id = $1 ORDER BY saved_at DESC",
             [req.user.id]
         );
-            //return response in json format.
-            res.json(result.rows);
+        //return response in json format with status code 200
+        res.status(200).json(result.rows);
     }
     catch(e)
     {
@@ -28,13 +28,15 @@ router.get("/", async (req, res) => {
     }
 });
 
-//POST /kanji - save a kanji to db
+//POST /kanji - save a kanji to db, 
+//response body contains all rows added to the db
 router.post("/", async (req, res) => {
     //initialize all these constants with the fields with the same name inside req's body
     const{kanji, on_readings, kun_readings, meanings, jlpt, saved_at} = req.body;
     try
     {
         //send transaction to db
+        //pool.query returns all rows added to the database
         const result = await pool.query(`
             INSERT INTO saved_kanji (kanji, on_readings, kun_readings, meanings, jlpt, saved_at, user_id)
             VALUES ($1, $2, $3, $4, $5, $6, $7)

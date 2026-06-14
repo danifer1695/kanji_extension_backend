@@ -40,8 +40,11 @@ router.post("/register", async (req, res) => {
     }
     catch(e)
     {
+        //Postgres throws an error code 23505 when we attempt to insert a duplicate of a unique value.
+        //We want to catch that and translate into a status code 409.
         if (e.code === "23505")
             return res.status(409).json({error: "Email already registered"});
+
         res.status(500).json({error: e.message});
     }
 });
@@ -64,6 +67,8 @@ router.post("/login", async (req, res) => {
         const result = await pool.query(
             "SELECT * FROM users WHERE email = $1", [email]
         );
+        //get first item because email has a 'unique' constraint, 
+        //so there should only be one returned row.
         const user = result.rows[0];
         if(!user) return res.status(401).json({error: "Invalid username"});
 
@@ -78,6 +83,9 @@ router.post("/login", async (req, res) => {
             process.env.JWT_SECRET,
             {expiresIn: process.env.JWT_EXPIRES_IN}
         );
+
+        //shorthand for res.json({token: token}). takes the variable name as the key, and the variable's 
+        //contained value as the value. So the reponse would read like {token: "j9238r67eijf3u88479..."}
         res.json({token});
     }
     catch (e)

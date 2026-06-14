@@ -14,7 +14,19 @@ require("dotenv").config();
 
 app.use(express.json());
 app.use(cors({
-    origin: "*",
+    //We pass a lambda to be fired by Express every time that a request is received
+    origin: (origin, callback) => {
+        //We establish different request acceptance conditions.
+        //If we want to accept a specific origin, we call callback(null, true)
+        //If we want to reject a specific origin, we call callback(new Error(), false)
+        if(!origin || origin.startsWith("chrome-extension://")) {
+            callback(null, true);
+        }
+        else
+        {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
     methods: ["GET", "POST", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
@@ -31,8 +43,15 @@ app.use("/kanji", require("./routes/kanji"));
 
 //----------------------------------------------------------------------------
 
-//get the port defined in dotenv or if that cannot be found, set it to 3000 by default
-const PORT = process.env.PORT || 3000;
+//Split the path so that "node index.js" can start the server normally but 
+//jest can request("index") starting to listen to a port.
+if(require.main === module) {
 
-//start listening on said port
-app.listen(PORT, () => console.log(`Shirabeyou API running on port ${PORT}`));
+    //get the port defined in dotenv or if that cannot be found, set it to 3000 by default
+    const PORT = process.env.PORT || 3000;
+
+    //Listen at given port
+    app.listen(PORT, () => console.log(`Shirabeyou API running on port ${PORT}`));
+}
+
+module.exports = app;
