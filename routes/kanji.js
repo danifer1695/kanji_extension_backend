@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../db");      //get the pool object we create in db.js containing DB info
 const auth_guard = require("../middleware/auth");
+const {validate, kanji_schema} = require("../middleware/validate");
 
 //router.use(auth_guard) sets auth_guard to fire whenever there is an incoming request 
 //for any of the FOLLOWING routes. Meaning it does not apply to routes declared before it
@@ -30,7 +31,7 @@ router.get("/", async (req, res) => {
 
 //POST /kanji - save a kanji to db, 
 //response body contains all rows added to the db
-router.post("/", async (req, res) => {
+router.post("/", validate(kanji_schema), async (req, res) => {
     //initialize all these constants with the fields with the same name inside req's body
     const{kanji, on_readings, kun_readings, meanings, jlpt, saved_at} = req.body;
     try

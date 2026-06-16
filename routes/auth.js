@@ -5,16 +5,18 @@ const jwt = require("jsonwebtoken");
 const pool = require("../db.js");
 require("dotenv").config();
 
+const {validate, register_schema, login_schema} = require("../middleware/validate")
+
 //Routes--------------------------------------------------------------------------------------------
 
 
 //POST /auth/register
-router.post("/register", async (req, res) => {
+//Here we are passing two functions to this route. 
+//validate runs first, then if all goes well, the "next()" call within 
+//it passes control to "async (req, res)"
+router.post("/register", validate(register_schema), async (req, res) => {
     //get email and password from req and store them in variables "email" and "password"
     const {email, password} = req.body;
-    
-    if(!email || !password)
-        return res.status(400).json({error: "Email and password required"});
 
     try 
     {
@@ -24,7 +26,8 @@ router.post("/register", async (req, res) => {
         //query database (accessed through pool)
         const result = await pool.query(`
                 INSERT INTO users (email, password_hash)
-                VALUES ($1, $2) RETURNING id, email`,
+                VALUES ($1, $2) 
+                RETURNING id, email`,
                 [email, password_hash]
             );
         const user = result.rows[0];
@@ -53,13 +56,10 @@ router.post("/register", async (req, res) => {
 //When a client successfully logs in, this function returns a token.
 //the client will then attach this token to every future request requiring authentification so that the server knows to 
 //let that request pass.
-router.post("/login", async (req, res) => {
+router.post("/login", validate(login_schema), async (req, res) => {
+
     //destructure email, password from req.body
     const {email, password} = req.body;
-
-    //if either email or password are missing or malformed
-    if(!email || !password  )
-        return res.status(400).json({error: "Email and password required"});
 
     //query the database, accessed through pool
     try{

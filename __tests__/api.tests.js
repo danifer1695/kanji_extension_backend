@@ -181,9 +181,9 @@ describe("DELETE /kanji/:char", () => {
 
         //add a kanji to the database using proper credentials (attaching token)
         await request(app)
-        .post("/kanji")
-        .set("Authorization", `Bearer ${token}`)
-        .send({
+            .post("/kanji")
+            .set("Authorization", `Bearer ${token}`)
+            .send({
                 kanji: "食",
                 on_readings: ["ショク"],
                 kun_readings: ["た.べる"],
@@ -194,17 +194,86 @@ describe("DELETE /kanji/:char", () => {
 
         //delete added kanji, again - attaching the token for authentification.
         const res = await request(app)
-        .delete("/kanji/食")
-        .set("Authorization", `Bearer ${token}`);
+            .delete("/kanji/食")
+            .set("Authorization", `Bearer ${token}`);
 
         //check the response's status code is what to expect from ./routes/kanji
         expect(res.status).toBe(204);
 
         //Now we verify that the entry is actually gone from the database.
         const check = await request(app)
-        .get("/kanji")
-        .set("Authorization", `Bearer ${token}`);
+            .get("/kanji")
+            .set("Authorization", `Bearer ${token}`);
 
         expect(check.body).toEqual([]);
+    });
+});
+
+//Input Validation-----------------
+describe("Input validation", () => {
+    test("rejects invalid email on register", async () => {
+
+        //Send request with an email not formatted like an email.
+        const res = await request(app)
+            .post("/auth/register")
+            .send({email: "not-an-email", password: "password123"});
+
+        //Check that response returns with status code 400
+        expect(res.status).toBe(400);
+    });
+
+    test("rejects short password on register", async () => {
+
+        //Send request with a password that is less than 8 chars long (rules set in middleware/validate)
+        const res = await request(app)
+            .post("/auth/register")
+            .send({email: "test@test.com", password: "pass"});
+
+        //Check that response returns with status code 400
+        expect(res.status).toBe(400);
+    });
+
+    test("rejects multi-character kanji", async () => {
+
+        //Register and get token.
+        const token = await get_token();
+
+        //Send request contining more than one character in the "kanji" field.
+        const res = await request(app)
+            .post("/kanji")
+            .set("Authorization", `Bearer ${token}`)
+            .send({
+                kanji: "食食",
+                on_readings: ["ショク"],
+                kun_readings: ["た.べる"],
+                meanings: ["eat"],
+                jlpt: 4,
+                saved_at: Date.now(),
+            });
+
+        //Check that response bounces with status code 400.
+        expect(res.status).toBe(400);
+    });
+
+    test("rejects out-of-range JLPT value", async () => {
+
+        //Register and get token.
+        const token = await get_token();
+
+        //Send request with an invalid JLPT value (x<1 || x>5)
+        const res = await request(app)
+            .post("/kanji")
+            .set("Authorization", `Bearer ${token}`)
+            .send({
+                kanji: "食",
+                on_readings: ["ショク"],
+                kun_readings: ["た.べる"],
+                meanings: ["eat"],
+                jlpt: 6,
+                saved_at: Date.now(),
+            });
+
+        //Expect status code 400.
+        expect(res.status).toBe(400);
     });
 });
