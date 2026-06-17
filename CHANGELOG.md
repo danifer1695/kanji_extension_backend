@@ -10,3 +10,4 @@
 ### Added
 - Local API testing with SuperTest
 - Input validation using Zod
+- Rate limits implemented with express-rate-limit
