@@ -4,11 +4,17 @@ require("dotenv").config({path: ".env.test"});
 const request = require("supertest");
 const app = require("../index");
 const pool = require("../db");
+const { auth_limiter, api_limiter } = require("../middleware/rate_limit");
 
 //Empty tables out before each test.
 beforeEach(async () => {
     await pool.query("DELETE FROM saved_kanji");
     await pool.query("DELETE FROM users");
+
+    //Reset rate limit before each test, so that limit is not reached between tests.
+    //"127.0.0.1" is the IPv4 SuperTest uses when making requests.
+    await auth_limiter.resetKey("127.0.0.1");
+    await api_limiter.resetKey("127.0.0.1");
 });
 
 //After all tests are done, close connection with DB
@@ -275,5 +281,27 @@ describe("Input validation", () => {
 
         //Expect status code 400.
         expect(res.status).toBe(400);
+    });
+});
+
+
+//Rate Limiting--------------------
+
+describe("Rate limiting", () => {
+    test("blocks auth requestes after limit is reached", async () => {
+
+        //Fire 11 requests, the 11th should pass the limit and trigger the block
+        let last_res;
+        for(let i = 0; i < 11; i++)
+        {
+            //We attempt to log in without having registered.
+            last_res = await request(app)
+                .post("/auth/login")
+                .send({email: "test@test.com", password: "password123"});
+        }
+
+        //Expect status to be 429
+        //express-rate-limit returns status 429 by default on rate limit trigger.
+        expect(last_res.status).toBe(429);
     });
 });

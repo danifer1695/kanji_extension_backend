@@ -1,13 +1,15 @@
 //express builds the skeleton object that knows hot to listen on a port and receive HTTP requests.
 //for example, without express, I'd have to parse through GET and POST endpoints manually
 const express = require("express");
+const app = express();
 
 //CORS enables communication between different origins. In this project,
-//localhost would be one origin, the browser extension is another.
-//By default, the browser would block a request coming from the extension to the server at localhost.
+//railway's server would be one origin, the browser extension is another.
+//By default, the browser would block a request coming from the extension to the server at railway / localhost.
 //CORS tells the browser where to accept requests from ("*" meaning from anywhere)
 const cors = require("cors");
-const app = express();
+
+const {auth_limiter, api_limiter} = require("./middleware/rate_limit");
 
 //get the .env file, where variables such as "PORT" are stored.
 require("dotenv").config();
@@ -32,14 +34,15 @@ app.use(cors({
 }));
 
 //Routes----------------------------------------------------------------------
+
 //GET /health - probe connection with server.
 app.get("/health", (req, res) => {
    res.status(200).json({status: "ok"});
 });
 
 //get the "/kanji" route so we can access the endpoints defined in kanji.js
-app.use("/auth", require("./routes/auth"));
-app.use("/kanji", require("./routes/kanji"));
+app.use("/auth", auth_limiter, require("./routes/auth"));
+app.use("/kanji", api_limiter, require("./routes/kanji"));
 
 //----------------------------------------------------------------------------
 
