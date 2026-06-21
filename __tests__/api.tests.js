@@ -106,7 +106,130 @@ describe("POST /auth/login", () => {
 
         //Assert response status.
         expect(res.status).toBe(401);
-    })
+    });
+});
+
+describe("PUT /auth/password", () => {
+    test("changes password with valid credentials", async () => {
+        //register account, get token.
+        const token = await get_token();
+
+        //request a pasword change.
+        const res = await request(app)
+            .put("/auth/password")
+            .set("Authorization", `Bearer ${token}`)
+            .send({current_password: "password123", new_password: "newPassword"});
+
+        //expect status code 200.
+        expect(res.status).toBe(200);
+
+        //verify new password by logging in with it.
+        const login = await request(app)
+            .post("/auth/login")
+            .send({email: "test@test.com", password: "newPassword"});
+
+        //expect status code to be 200 and for the token to be 
+        //inside the response's json
+        expect(login.status).toBe(200);
+        expect(login.body.token).toBeDefined();
+    });
+
+    test("rejects incorrect current password", async () => {
+        //register account, get token.
+        const token = await get_token();
+
+        //request a password change but give the wrong current pass.
+        const res = await request(app)
+            .put("/auth/password")
+            .set("Authorization", `Bearer ${token}`)
+            .send({current_password: "wrongPass", new_password: "newPassword"});
+
+        //expect status 401.
+        expect(res.status).toBe(401);
+    });
+
+    test("rejects new password if its too short", async () => {
+        //regiester account, get token.
+        const token  = await get_token();
+
+        //request a password change, give a password that is <8 chars long.
+        const res = await request(app)
+            .put("/auth/password")
+            .set("Authorization", `Bearer ${token}`)
+            .send({current_password: "password123", new_password: "short"});
+
+        //expect status code 400
+        expect(res.status).toBe(400);
+    });
+
+    test("bounces requests without token", async () => {
+        //send a request without a token.
+        const res = await request(app)
+            .put("/auth/password")
+            .send({current_password: "password123", new_password: "newPassword"});
+
+        //expect code 401.
+        expect(res.status).toBe(401);
+    });
+});
+
+describe("DELETE /auth/account", () => {
+    test("deletes an account and all of its saved kanji", async () => {
+        //Create account, get token.
+        const token = await get_token();
+
+        //Get user's id to later be able to check on the database.
+        const id_query = await pool.query(
+            "SELECT id FROM users WHERE email = $1",
+            ["test@test.com"]
+        );
+        const user_id = id_query.rows[0].id;
+
+        //Save a kanji so we can later verify it was deleter.
+        await request(app)
+            .post("/kanji")
+            .set("Authorization", `Bearer ${token}`)
+            .send({
+                kanji: "食",
+                on_readings: ["ショク"],
+                kun_readings: ["た.べる"],
+                meanings: ["eat"],
+                jlpt: 4,
+                saved_at: Date.now(),
+            });
+        
+        //Request account deletion.
+        const res = await request(app)
+            .delete("/auth/account")
+            .set("Authorization", `Bearer ${token}`);
+
+        //Expect response status code 204.
+        expect(res.status).toBe(204);
+
+        //Verify account is gone by trying to log in.
+        const login = await request(app)
+            .post("/auth/login")
+            .set("Authorization", `Bearer ${token}`)
+            .send({email: "test@test.com", password: "password123"});
+
+        expect(login.status).toBe(401);
+
+        //Verify kanji are gone too.
+        const kanji_check = await pool.query(
+            "SELECT * FROM saved_kanji WHERE user_id = $1",
+            [user_id]
+        );
+        expect(kanji_check.rows).toHaveLength(0);
+    });
+
+    test("Bounces request without a token", async () => {
+        //make a request without passing a token.
+        const res = await request(app)
+            .delete("/auth/account");
+        
+        //expect response status to be 401
+        expect(res.status).toBe(401);
+    });
 });
 
 //Kanji----------------------------

@@ -11,3 +11,7 @@
 - Local API testing with SuperTest
 - Input validation using Zod
 - Rate limits implemented with express-rate-limit
+
+## [0.1.2] - 2026-06-21
+### Added
+- Account deletion and password changing routes & tests implemented.

@@ -5,12 +5,10 @@ const jwt = require("jsonwebtoken");
 const pool = require("../db.js");
 require("dotenv").config();
 
-const {validate, register_schema, login_schema} = require("../middleware/validate")
+const {validate, register_schema, login_schema, change_password_schema} = require("../middleware/validate")
+const auth_guard = require("../middleware/auth.js");
 
-//Routes--------------------------------------------------------------------------------------------
-
-
-//POST /auth/register
+//POST /auth/register------------------------------------------------------------------------------
 //Here we are passing two functions to this route. 
 //validate runs first, then if all goes well, the "next()" call within 
 //it passes control to "async (req, res)"
@@ -52,7 +50,7 @@ router.post("/register", validate(register_schema), async (req, res) => {
     }
 });
 
-//POST /auth/login
+//POST /auth/login------------------------------------------------------------------------------
 //When a client successfully logs in, this function returns a token.
 //the client will then attach this token to every future request requiring authentification so that the server knows to 
 //let that request pass.
@@ -93,5 +91,74 @@ router.post("/login", validate(login_schema), async (req, res) => {
         res.status(500).json({error: e.message});
     }
 });
+
+//POST /auth/password------------------------------------------------------------------------------
+//Password changing route.
+//We pass auth_guard because we want the user to have a valid auth token to be able to do this action.
+router.put("/password", auth_guard, validate(change_password_schema), async (req, res) => {
+
+    //destructure email and pass from the request's body.
+    const {current_password, new_password} = req.body;
+
+    //use pool to access the database, query it to change the password
+    try
+    {
+        //Query the hashed password with a matching user ID
+        const result = await pool.query(
+            "SELECT password_hash FROM users WHERE id = $1",
+            [req.user.id]
+        );
+        const user = result.rows[0];
+        if(!user) return res.status(404).json({error: "User not found."});
+
+        //use bcrypt's compare function to compare current_password to the queried result.
+        const match = await bcrypt.compare(current_password, user.password_hash);
+        if(!match) return res.status(401).json({error: "Current password is incorrect."});
+
+        //use bcrypt to hash the new password (10 salt rounds) and then add it to the database.
+        const new_hash = await bcrypt.hash(new_password, 10);
+        await pool.query(
+            "UPDATE users SET password_hash = $1 WHERE id = $2",
+            [new_hash, req.user.id]
+        );
+
+        //return 'ok' status 200
+        res.status(200).json({message: "Password successfully updated."});
+    }
+    catch (e)
+    {
+        res.status(500).json({error: e.message});
+    } 
+});
+
+//DELETE /auth/account-----------------------------------------------------------------------------
+//Delete account.
+router.delete("/account", auth_guard, async (req, res) => {
+
+    try
+    {
+        //----ON DELETE CASCADE in SQL database takes care of deleting related entries.----
+        //Delete all kanji entries belinging to this account. 
+        //await pool.query(
+        //    "DELETE FROM saved_kanji WHERE user_id = $1",
+        //    [req.user.id]
+        //);
+
+        //Delete the user itself.
+        await pool.query(
+            "DELETE FROM users WHERE id = $1",
+            [req.user.id]
+        );
+
+        res.status(204).send();
+    }
+    catch(e)
+    {
+        return res.status(500).json({error: e.message});
+    }
+
+});
+
+//-------------------------------------------------------------------------------------------------
 
 module.exports = router;

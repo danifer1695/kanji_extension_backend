@@ -22,6 +22,12 @@ const kanji_schema = z.object({
     saved_at: z.number(),
 });
 
+//Change password validation.
+const change_password_schema = z.object({
+    current_password: z.string().min(1, "Please enter your current password."),
+    new_password: z.string().min(8, "New password must be at least 8 characters long"),
+});
+
 //Validation------------------------------------------------------------------
 
 //Validates a request's body against a given schema.
@@ -42,4 +48,4 @@ function validate(schema)
 }
 
 //export module
-module.exports = {validate, register_schema, login_schema, kanji_schema};
+module.exports = {validate, register_schema, login_schema, kanji_schema, change_password_schema};
