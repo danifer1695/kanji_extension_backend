@@ -21,7 +21,7 @@ app.use(cors({
         //We establish different request acceptance conditions.
         //If we want to accept a specific origin, we call callback(null, true)
         //If we want to reject a specific origin, we call callback(new Error(), false)
-        if(!origin || origin.startsWith("chrome-extension://")) {
+        if(!origin || origin.startsWith("chrome-extension://") || origin.startsWith("https://en.wikipedia.org")) {
             callback(null, true);
         }
         else
