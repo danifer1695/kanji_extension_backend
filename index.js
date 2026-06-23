@@ -17,7 +17,7 @@ require("dotenv").config();
 app.use(express.json());
 app.use(cors({
     //We pass a lambda to be fired by Express every time that a request is received
-    origin: '/*splat',
+    origin: '*',
     methods: ["GET", "POST", "DELETE", "PUT"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
