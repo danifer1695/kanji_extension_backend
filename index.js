@@ -32,7 +32,7 @@ app.use(cors({
     methods: ["GET", "POST", "DELETE", "PUT"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
-app.options('/*splat', cors());
+//'/*splat' is Express 5's new widcard, what usually is just "*"
 
 //Routes----------------------------------------------------------------------
 
