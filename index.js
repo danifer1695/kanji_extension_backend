@@ -17,18 +17,7 @@ require("dotenv").config();
 app.use(express.json());
 app.use(cors({
     //We pass a lambda to be fired by Express every time that a request is received
-    origin: (origin, callback) => {
-        //We establish different request acceptance conditions.
-        //If we want to accept a specific origin, we call callback(null, true)
-        //If we want to reject a specific origin, we call callback(new Error(), false)
-        if(!origin || origin.startsWith("chrome-extension://") || origin.startsWith("https://en.wikipedia.org")) {
-            callback(null, true);
-        }
-        else
-        {
-            callback(new Error("Not allowed by CORS"));
-        }
-    },
+    origin: '/*splat',
     methods: ["GET", "POST", "DELETE", "PUT"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
