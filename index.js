@@ -32,7 +32,7 @@ app.use(cors({
     methods: ["GET", "POST", "DELETE", "PUT"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
-app.options("*", cors());
+app.options('/*splat', cors());
 
 //Routes----------------------------------------------------------------------
 
