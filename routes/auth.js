@@ -100,6 +100,9 @@ router.put("/password", auth_guard, validate(change_password_schema), async (req
     //destructure email and pass from the request's body.
     const {current_password, new_password} = req.body;
 
+    //We do not want users to be able to alter the test account.
+    if(req.user.email === "test@test.com") return res.status(403).json({error: "Test account credentials cannot be modified."});
+
     //use pool to access the database, query it to change the password
     try
     {
@@ -134,6 +137,9 @@ router.put("/password", auth_guard, validate(change_password_schema), async (req
 //DELETE /auth/account-----------------------------------------------------------------------------
 //Delete account.
 router.delete("/account", auth_guard, async (req, res) => {
+
+    //We do not want the users to be able to delete the test account.
+    if(req.user.email === "test@test.com") return res.status(403).json({error: "Test account cannot be deleted."});
 
     try
     {
