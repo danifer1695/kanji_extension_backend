@@ -12,6 +12,10 @@ const login_schema = z.object({
     password: z.string().min(1, "Password is required"),
 });
 
+const single_kanji_schema = z.object({
+    kanji: z.string().regex(/^[\u4e00-\u9fff]$/, "Kanji must be a single CJK character."),
+})
+
 //maje sure kanji field contains a kanji character (within the unicode CJK character range)
 const kanji_schema = z.object({
     kanji: z.string().regex(/^[\u4e00-\u9fff]$/, "Kanji must be a single CJK character."),
@@ -47,5 +51,19 @@ function validate(schema)
     };
 }
 
+function validate_query(schema)
+{
+    return (req, res, next) => {
+        const result = schema.safeParse(req.query);
+        if(!result.success)
+        {
+            return res.status(400).json({error: result.error.errors[0].message});
+        }
+
+        req.body = result.data;
+        next();
+    }
+}
+
 //export module
-module.exports = {validate, register_schema, login_schema, kanji_schema, change_password_schema};
+module.exports = {validate, validate_query, register_schema, login_schema, kanji_schema, single_kanji_schema, change_password_schema};

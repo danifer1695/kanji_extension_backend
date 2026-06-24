@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../db");      //get the pool object we create in db.js containing DB info
 const auth_guard = require("../middleware/auth");
-const {validate, kanji_schema} = require("../middleware/validate");
+const {validate, validate_query, kanji_schema, single_kanji_schema} = require("../middleware/validate");
 
 //router.use(auth_guard) sets auth_guard to fire whenever there is an incoming request 
 //for any of the FOLLOWING routes. Meaning it does not apply to routes declared before it
@@ -29,6 +29,31 @@ router.get("/", async (req, res) => {
     }
 });
 
+//GET /kanji/contains - checks whether database contains a specific kanji or not.
+//Requests should be formatted as "GET/kanji/contains?kanji=食"
+//Response contains a boolean value. 
+router.get("/contains", validate_query(single_kanji_schema), async (req, res) => {
+    //get kanji from request query.
+    const {kanji} = req.query;
+    
+    //Query database.
+    try
+    {
+        const results = await pool.query(`
+            SELECT * FROM saved_kanji WHERE kanji = $1 AND user_id = $2`, 
+            [kanji, req.user.id]
+        );
+        
+        //Return true or false dending on whether any results were found or not.
+        res.status(200).json(results.rows.length > 0);
+    }
+    catch(e)
+    {
+        res.status(500).json({error: e.message});
+    }
+    
+});
+ 
 //POST /kanji - save a kanji to db, 
 //response body contains all rows added to the db
 router.post("/", validate(kanji_schema), async (req, res) => {

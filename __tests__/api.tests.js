@@ -258,6 +258,60 @@ describe("GET /kanji", () => {
     });
 });
 
+describe("GET /kanji/contains", () => {
+    test("returns status 400 if kanji is not provided in query", async () => {
+        //register account, get token.
+        const token = await get_token();
+
+        //make a request, with no kanji it its route.
+        const res = await request(app)
+            .get("/kanji/contains")
+            .set("Authorization", `Bearer ${token}`);
+        
+        //expect a status 400 in response.
+        expect(res.status).toBe(400);
+    });
+
+    test("returns false if provided kanji does not exists in database", async () => {
+        //register account and get token.
+        const token = await get_token();
+
+        //Send request without having saved a kanji.
+        const res = await request(app)
+            .get("/kanji/contains?kanji=食")
+            .set("Authorization", `Bearer ${token}`);
+
+        //Check response is negative
+        expect(res.body).toBe(false);
+    });
+
+    test("returns true if provided kanji does exist in database", async () => {
+        //register account and get token.
+        const token = await get_token();
+
+        //save a kanji to the database.
+        await request(app)
+            .post("/kanji")
+            .set("Authorization", `Bearer ${token}`)
+            .send({
+                kanji: "食",
+                on_readings: ["ショク"],
+                kun_readings: ["た.べる"],
+                meanings: ["eat"],
+                jlpt: 4,
+                saved_at: Date.now(),
+            });
+        
+        //make a request to check if that kanji exists.
+        const res = await request(app)
+            .get("/kanji/contains?kanji=食")
+            .set("Authorization", `Bearer ${token}`);
+
+        //expect response to be true.
+        expect(res.body).toBe(true);
+    })
+})
+
 describe("POST /kanji", () => {
     test("saves kanji and returns it", async () => {
         //use our helper to register an account and get the auth token.
