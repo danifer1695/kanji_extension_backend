@@ -419,6 +419,47 @@ describe("DELETE /kanji/:char", () => {
     });
 });
 
+describe("GET /kanji/size", () => {
+    test("returns valid database size", async () => {
+        //create an account, get token.
+        const token = await get_token();
+
+        //add a kanji to the database.
+        await request(app)
+            .post("/kanji")
+            .set("Authorization", `Bearer ${token}`)
+            .send({
+                kanji: "食",
+                on_readings: ["ショク"],
+                kun_readings: ["た.べる"],
+                meanings: ["eat"],
+                jlpt: 4,
+                saved_at: Date.now(),
+            });
+
+        //send request for database size.
+        const res = await request(app)
+            .get("/kanji/size")
+            .set("Authorization", `Bearer ${token}`);
+
+        //Expect a size of 1.
+        expect(res.body).toBe(1);
+    });
+
+    test("returns valid size on an empty database", async () => {
+        //create an account, get token.
+        const token = await get_token();
+
+        //send request for database size.
+        const res = await request(app)
+            .get("/kanji/size")
+            .set("Authorization", `Bearer ${token}`);
+
+        //Expect a size of 1.
+        expect(res.body).toBe(0);
+    });
+});
+
 //Input Validation-----------------
 describe("Input validation", () => {
     test("rejects invalid email on register", async () => {

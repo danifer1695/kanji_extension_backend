@@ -54,6 +54,24 @@ router.get("/contains", validate_query(single_kanji_schema), async (req, res) =>
     
 });
  
+//GET /kanji/size - returns the amount of kanji saved by this user.
+router.get("/size", async (req, res) => {
+    //query the database.
+    try
+    {
+        const size = await pool.query(`
+            SELECT COUNT(*)::int FROM saved_kanji WHERE user_id = $1`,
+            [req.user.id]
+        );
+        
+        res.status(200).json(size.rows[0].count);
+    }
+    catch(e)
+    {
+        res.status(500).json({error: e.message});
+    }
+});
+
 //POST /kanji - save a kanji to db, 
 //response body contains all rows added to the db
 router.post("/", validate(kanji_schema), async (req, res) => {
