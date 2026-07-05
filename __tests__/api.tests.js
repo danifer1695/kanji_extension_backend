@@ -339,6 +339,48 @@ describe("GET /kanji/contains", () => {
     })
 })
 
+describe("GET /kanji/search?query=...", () => {
+    test("successfully retrieves matching kanji from katakana reading", async () => {
+        //log in and get auth token.
+        const token = await get_token();
+
+        //make a request using kana as query.
+        const res = await request(app)
+            .get("/kanji/search?query=ショク")
+            .set("Authorization", `Bearer ${token}`);
+
+        //expect 食 to be among the results
+        expect(res.body).toContain("食");
+    });
+
+    test("successfully retrieves matching kanji from hiragana reading", async () => {
+        //log in and get auth token.
+        const token = await get_token();
+
+        //make a request using kana as query.
+        const res = await request(app)
+            .get("/kanji/search?query=しょく")
+            .set("Authorization", `Bearer ${token}`);
+
+        //expect 食 to be among the results
+        expect(res.body).toContain("食");
+    });
+
+
+    test("successfully retrieves matching kanji from romaji reading", async () => {
+        //login and get auth token.
+        const token = await get_token();
+
+        //make a request using romaji as a query
+        const res = await request(app)
+            .get("/kanji/search?query=shoku")
+            .set("Authorization", `Bearer ${token}`);
+
+        //expect 食 to be among the results
+        expect(res.body).toContain("食");
+    });
+});
+
 describe("POST /kanji", () => {
     test("saves kanji and returns it", async () => {
         //use our helper to register an account and get the auth token.
