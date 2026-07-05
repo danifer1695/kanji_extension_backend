@@ -366,7 +366,6 @@ describe("GET /kanji/search?query=...", () => {
         expect(res.body).toContain("食");
     });
 
-
     test("successfully retrieves matching kanji from romaji reading", async () => {
         //login and get auth token.
         const token = await get_token();
@@ -378,6 +377,19 @@ describe("GET /kanji/search?query=...", () => {
 
         //expect 食 to be among the results
         expect(res.body).toContain("食");
+    });
+
+    test("return status code 400 on empty query", async () => {
+        //login and get auth token.
+        const token = await get_token();
+
+        //make a request using romaji as a query
+        const res = await request(app)
+            .get("/kanji/search")
+            .set("Authorization", `Bearer ${token}`);
+
+        //expect 食 to be among the results
+        expect(res.status).toBe(400);
     });
 });
 

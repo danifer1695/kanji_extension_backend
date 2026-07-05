@@ -13,6 +13,6 @@
 ## [0.1.2] - 2026-06-21
 - Account deletion and password changing routes & tests implemented.
 
-## [0.1.2] - 2026-07-05
+## [0.1.3] - 2026-07-05
 - GET/kanji/search?query=[...] route added to get kanji reading matches from kanjiapi.dev
 - Route logic moved to controllers/
