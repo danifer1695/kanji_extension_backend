@@ -43,7 +43,7 @@ function validate(schema)
         const result = schema.safeParse(req.body);
         if (!result.success)
         {
-            return res.status(400).json({error: result.error.errors[0].message});
+            return res.status(400).json({error: result.error.issues[0].message});
         }
 
         req.body = result.data;
@@ -57,7 +57,7 @@ function validate_query(schema)
         const result = schema.safeParse(req.query);
         if(!result.success)
         {
-            return res.status(400).json({error: result.error.errors[0].message});
+            return res.status(400).json({error: result.error.issues[0].message});
         }
 
         req.body = result.data;

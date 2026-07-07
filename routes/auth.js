@@ -24,7 +24,7 @@ router.post("/register", validate(register_schema), register_account);
 //POST /auth/login
 router.post("/login", validate(login_schema), login_account);
 
-//POST /auth/password
+//PUT /auth/password - change password
 router.put("/password", auth_guard, validate(change_password_schema), change_password);
 
 //DELETE /auth/account

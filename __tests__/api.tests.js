@@ -337,7 +337,7 @@ describe("GET /kanji/contains", () => {
         //expect response to be true.
         expect(res.body).toBe(true);
     })
-})
+});
 
 describe("GET /kanji/search?query=...", () => {
     test("successfully retrieves matching kanji from katakana reading", async () => {

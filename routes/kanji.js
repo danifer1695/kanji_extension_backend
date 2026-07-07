@@ -23,11 +23,11 @@ const {
 router.use(auth_guard); 
 
 //Routes-----------------------------------------------------------------------------------------
-//
+
 //GET /kanji - fetch all saved kanji
 router.get("/", fetch_all_kanji);
 
-//GET /kanji/contains - checks whether database contains a specific kanji or not.
+//GET /kanji/contains?kanji=[...] - checks whether database contains a specific kanji or not.
 router.get("/contains", validate_query(single_kanji_schema), contains_kanji);
  
 //GET /kanji/size - returns the amount of kanji saved by this user.
@@ -40,6 +40,7 @@ router.post("/", validate(kanji_schema), save_kanji);
 router.delete("/:char", remove_kanji);
 
 //GET /kanji/search?query=xxx - where "xxx" is the query to process.
+//Returns a list of strings containing resulting kanji
 router.get("/search", kanji_from_reading);
 
 //module.export will export the behaviour written in this script when this route is called using require()
