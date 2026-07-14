@@ -3,12 +3,12 @@ const {z} = require("zod");
 //Schemas---------------------------------------------------------------------
 
 const register_schema = z.object({
-    email: z.email("Invalid email address"),
+    username: z.string().min(4).max(30, "Username must be 4-30 characters long."),
     password: z.string().min(8, "Password must be at least 8 characters long."),
 });
 
 const login_schema = z.object({
-    email: z.email("Invalid email address"),
+    username: z.string().min(1, "Username is required."),
     password: z.string().min(1, "Password is required"),
 });
 

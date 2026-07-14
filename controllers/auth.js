@@ -7,8 +7,8 @@ require("dotenv").config();
 //validate runs first, then if all goes well, the "next()" call within 
 //it passes control to "async (req, res)"
 const register_account = async (req, res) => {
-    //get email and password from req and store them in variables "email" and "password"
-    const {email, password} = req.body;
+    //get username and password from req and store them in variables "username" and "password"
+    const {username, password} = req.body;
 
     try 
     {
@@ -17,17 +17,17 @@ const register_account = async (req, res) => {
         
         //query database (accessed through pool)
         const result = await pool.query(`
-                INSERT INTO users (email, password_hash)
+                INSERT INTO users (username, password_hash)
                 VALUES ($1, $2) 
-                RETURNING id, email`,
-                [email, password_hash]
+                RETURNING id, username`,
+                [username, password_hash]
             );
         const user = result.rows[0];
 
-        //encode the user's id and email into a token, which will be read and decoded by middleware/auth.js
+        //encode the user's id and username into a token, which will be read and decoded by middleware/auth.js
         //the token is then signed using JWT_SECRET
         const token = jwt.sign(
-            {id: user.id, email: user.email},
+            {id: user.id, username: user.username},
             process.env.JWT_SECRET,
             {expiresIn: process.env.JWT_EXPIRES_IN}
         );
@@ -38,7 +38,7 @@ const register_account = async (req, res) => {
         //Postgres throws an error code 23505 when we attempt to insert a duplicate of a unique value.
         //We want to catch that and translate into a status code 409.
         if (e.code === "23505")
-            return res.status(409).json({error: "Email already registered"});
+            return res.status(409).json({error: "Username already registered"});
 
         res.status(500).json({error: e.message});
     }
@@ -49,16 +49,16 @@ const register_account = async (req, res) => {
 //let that request pass.
 const login_account = async (req, res) => {
 
-    //destructure email, password from req.body
-    const {email, password} = req.body;
+    //destructure username, password from req.body
+    const {username, password} = req.body;
 
     //query the database, accessed through pool
     try{
-        //get the user whose email matches with the one in the request
+        //get the user whose username matches with the one in the request
         const result = await pool.query(
-            "SELECT * FROM users WHERE email = $1", [email]
+            "SELECT * FROM users WHERE username = $1", [username]
         );
-        //get first item because email has a 'unique' constraint, 
+        //get first item because username has a 'unique' constraint, 
         //so there should only be one returned row.
         const user = result.rows[0];
         if(!user) return res.status(401).json({error: "Invalid username"});
@@ -70,7 +70,7 @@ const login_account = async (req, res) => {
         //If the client provided valid credentials, we encode and attach a token to the response,
         //which the client will use to validate future requests.
         const token = jwt.sign(
-            {id: user.id, email: user.email},
+            {id: user.id, username: user.username},
             process.env.JWT_SECRET,
             {expiresIn: process.env.JWT_EXPIRES_IN}
         );
@@ -89,11 +89,11 @@ const login_account = async (req, res) => {
 //We pass auth_guard because we want the user to have a valid auth token to be able to do this action.
 const change_password = async (req, res) => {
 
-    //destructure email and pass from the request's body.
+    //destructure old and new pass from the request's body.
     const {current_password, new_password} = req.body;
 
     //We do not want users to be able to alter the test account.
-    if(req.user.email === "test@test.com") return res.status(403).json({error: "Test account credentials cannot be modified."});
+    if(req.user.username === "test@test.com") return res.status(403).json({error: "Test account credentials cannot be modified."});
 
     //use pool to access the database, query it to change the password
     try
@@ -130,7 +130,7 @@ const change_password = async (req, res) => {
 const delete_account = async (req, res) => {
 
     //We do not want the users to be able to delete the test account.
-    if(req.user.email === "test@test.com") return res.status(403).json({error: "Test account cannot be deleted."});
+    if(req.user.username === "test@test.com") return res.status(403).json({error: "Test account cannot be deleted."});
 
     try
     {

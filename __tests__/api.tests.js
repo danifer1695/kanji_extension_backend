@@ -24,11 +24,11 @@ afterAll(async () => {
 
 //Helpers-------------------------------------------------------------------------
 //Register a user and return their auth token.
-async function get_token(email = "api@test.com", password = "password123")
+async function get_token(username = "api@test.com", password = "password123")
 {
     const res = await request(app)
         .post("/auth/register")
-        .send({email, password});
+        .send({username, password});
     return res.body.token;
 }
 
@@ -40,7 +40,7 @@ describe("POST /auth/register", () => {
         //create a new account
         const res = await request(app)
             .post("/auth/register")
-            .send({email: "api@test.com", password: "password123"});
+            .send({username: "api@test.com", password: "password123"});
 
         //assert status code and response body
         expect(res.status).toBe(201);
@@ -48,17 +48,17 @@ describe("POST /auth/register", () => {
     });
 
     //Remember: we set the db tables to be wiped between tests.
-    test("rejects duplicate email", async () => {
+    test("rejects duplicate username", async () => {
 
         //Create anew account
         await request(app)
             .post("/auth/register")
-            .send({email: "api@test.com", password: "password123"});
+            .send({username: "api@test.com", password: "password123"});
 
         //Create another account using same credentials.
         const res = await request(app)
             .post("/auth/register")
-            .send({email: "api@test.com", password: "password123"});
+            .send({username: "api@test.com", password: "password123"});
 
         //./routes/auth defines status 409 as the one to be thrown when
         //Postgres detects an attempt to add a duplicate to a value with a "unique" constraint.
@@ -68,10 +68,10 @@ describe("POST /auth/register", () => {
     test("rejects missing fields", async () => {
         const res = await request(app)
             .post("/auth/register")
-            .send({email: "api@test.com"});
+            .send({username: "api@test.com"});
 
         //./routes/auth defines status 400 as the one to be thrown when
-        //either 'email' or 'password' was not included in the request.
+        //either 'username' or 'password' was not included in the request.
         expect(res.status).toBe(400);
     });
 });
@@ -81,12 +81,12 @@ describe("POST /auth/login", () => {
         //register account.
         await request(app)
             .post("/auth/register")
-            .send({email: "api@test.com", password: "password123"});
+            .send({username: "api@test.com", password: "password123"});
 
         //Login using credentials we just created.
         const res = await request(app)
             .post("/auth/login")
-            .send({email: "api@test.com", password: "password123"});
+            .send({username: "api@test.com", password: "password123"});
 
         //Check for token.
         expect(res.status).toBe(200);
@@ -97,12 +97,12 @@ describe("POST /auth/login", () => {
         //register account.
         await request(app)
             .post("/auth/register")
-            .send({email: "api@test.com", password: "password123"});
+            .send({username: "api@test.com", password: "password123"});
 
         //Attempt to log in with the wrong pass.
         const res = await request(app)
             .post("/auth/login")
-            .send({email: "api@test.com", password: "wrongPass"});
+            .send({username: "api@test.com", password: "wrongPass"});
 
         //Assert response status.
         expect(res.status).toBe(401);
@@ -126,7 +126,7 @@ describe("PUT /auth/password", () => {
         //verify new password by logging in with it.
         const login = await request(app)
             .post("/auth/login")
-            .send({email: "api@test.com", password: "newPassword"});
+            .send({username: "api@test.com", password: "newPassword"});
 
         //expect status code to be 200 and for the token to be 
         //inside the response's json
@@ -194,7 +194,7 @@ describe("DELETE /auth/account", () => {
 
         //Get user's id to later be able to check on the database.
         const id_query = await pool.query(
-            "SELECT id FROM users WHERE email = $1",
+            "SELECT id FROM users WHERE username = $1",
             ["api@test.com"]
         );
         const user_id = id_query.rows[0].id;
@@ -224,7 +224,7 @@ describe("DELETE /auth/account", () => {
         const login = await request(app)
             .post("/auth/login")
             .set("Authorization", `Bearer ${token}`)
-            .send({email: "api@test.com", password: "password123"});
+            .send({username: "api@test.com", password: "password123"});
 
         expect(login.status).toBe(401);
 
@@ -516,12 +516,12 @@ describe("GET /kanji/size", () => {
 
 //Input Validation-----------------
 describe("Input validation", () => {
-    test("rejects invalid email on register", async () => {
+    test("rejects short username on register", async () => {
 
-        //Send request with an email not formatted like an email.
+        //Send request with an username not formatted like an username.
         const res = await request(app)
             .post("/auth/register")
-            .send({email: "not-an-email", password: "password123"});
+            .send({username: "ts", password: "password123"});
 
         //Check that response returns with status code 400
         expect(res.status).toBe(400);
@@ -532,7 +532,7 @@ describe("Input validation", () => {
         //Send request with a password that is less than 8 chars long (rules set in middleware/validate)
         const res = await request(app)
             .post("/auth/register")
-            .send({email: "api@test.com", password: "pass"});
+            .send({username: "api@test.com", password: "pass"});
 
         //Check that response returns with status code 400
         expect(res.status).toBe(400);
@@ -596,7 +596,7 @@ describe("Rate limiting", () => {
             //We attempt to log in without having registered.
             last_res = await request(app)
                 .post("/auth/login")
-                .send({email: "api@test.com", password: "password123"});
+                .send({username: "api@test.com", password: "password123"});
         }
 
         //Expect status to be 429

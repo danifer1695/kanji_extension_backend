@@ -16,3 +16,4 @@
 ## [0.1.3] - 2026-07-05
 - GET/kanji/search?query=[...] route added to get kanji reading matches from kanjiapi.dev
 - Route logic moved to controllers/
+- Users no longer need an email to log in, just a username. (database, middleware, controllers & tests updated)

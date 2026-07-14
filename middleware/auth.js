@@ -21,7 +21,7 @@ function auth_guard(req, res, next)
         //decrypt the token using encrypting code stored in .env
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        //{id, email} now becomes available  in every protected route
+        //{id, username} now becomes available  in every protected route
         req.user = decoded;
 
         //pass the request to the next element in line.
