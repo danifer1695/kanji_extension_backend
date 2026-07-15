@@ -17,3 +17,6 @@
 - GET/kanji/search?query=[...] route added to get kanji reading matches from kanjiapi.dev
 - Route logic moved to controllers/
 - Users no longer need an email to log in, just a username. (database, middleware, controllers & tests updated)
+
+## [0.2.0] - 2026-7-15
+- Implemented SRS (Spaced Repetition System)

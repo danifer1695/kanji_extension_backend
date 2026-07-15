@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const pool = require("../db.js");
+const pool = require("../public/db.js");
 require("dotenv").config();
 
 //Here we are passing two functions to this route. 

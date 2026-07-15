@@ -3,7 +3,7 @@ require("dotenv").config({path: ".env.test"});
 
 const request = require("supertest");
 const app = require("../index");
-const pool = require("../db");
+const pool = require("../public/db");
 const { auth_limiter, api_limiter } = require("../middleware/rate_limit");
 
 //Empty tables out before each test.

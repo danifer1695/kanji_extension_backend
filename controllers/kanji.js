@@ -1,4 +1,4 @@
-const pool = require("../db");      //get the pool object we create in db.js containing DB info
+const pool = require("../public/db");      //get the pool object we create in db.js containing DB info
 const wanakana = require("../lib/wanakana.min.js");
 
 //fetch all saved kanji
