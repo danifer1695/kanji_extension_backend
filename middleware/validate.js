@@ -32,6 +32,12 @@ const change_password_schema = z.object({
     new_password: z.string().min(8, "New password must be at least 8 characters long"),
 });
 
+//Validation for practice responses from client
+const practice_submit_schema = z.object({
+    answer: z.string().min(1).max(50),
+    prompt_type: z.enum(["reading", "meaning"]),
+});
+
 //Validation------------------------------------------------------------------
 
 //Validates a request's body against a given schema.
@@ -66,4 +72,13 @@ function validate_query(schema)
 }
 
 //export module
-module.exports = {validate, validate_query, register_schema, login_schema, kanji_schema, single_kanji_schema, change_password_schema};
+module.exports = {
+    validate, 
+    validate_query, 
+    register_schema, 
+    login_schema, 
+    kanji_schema, 
+    single_kanji_schema, 
+    change_password_schema,
+    practice_submit_schema,
+};

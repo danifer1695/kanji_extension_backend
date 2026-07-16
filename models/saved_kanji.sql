@@ -19,5 +19,5 @@ CREATE TABLE saved_kanji (
     CONSTRAINT mastery_level_range CHECK (mastery_level BETWEEN 0 AND 8);
 );
 
-CREATE INDEX idx_saved_kanji_due ON saved_kanji (user_id, next_review_at);
+CREATE INDEX idx_saved_kanji_due ON saved_kanji (user_id, next_review);
 \q
