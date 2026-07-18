@@ -5,6 +5,26 @@ const request = require("supertest");
 const app = require("../index");
 const pool = require("../public/db");
 const { auth_limiter, api_limiter } = require("../middleware/rate_limit");
+const { fetch_kanji_data } = require("../public/kanjiapi");
+
+//Constants
+const SHOKU = {
+    kanji: "食",
+    on_readings: ["ショク"],
+    kun_readings: ["た.べる"],
+    meanings: ["eat"],
+    jlpt: 4,
+    saved_at: Date.now(),
+};
+
+//Jest setup----------------------------------------------------------------------
+//Mock kanjiapi.dev so that we're not actually requesting to it every time.
+//This catches any calls to require(../public/kanjiapi) and it runs 
+//the functions defined in here instead of the ones in the real module.
+//fn() creates a mock function. called with no parameters returns undefined.
+jest.mock("../public/kanjiapi", () => ({
+    fetch_kanji_data: jest.fn(),
+}));
 
 //Empty tables out before each test.
 beforeEach(async () => {
@@ -15,6 +35,12 @@ beforeEach(async () => {
     //"127.0.0.1" is the IPv4 SuperTest uses when making requests.
     await auth_limiter.resetKey("127.0.0.1");
     await api_limiter.resetKey("127.0.0.1");
+
+    //we are telliing jest to return a promise that resolves 
+    //to "SHOKU" when fetch_kanji_data is called.
+    //this is possible because we intercepted this module call with jest.mock()
+    //Result - any call to fetch_kanji_data will return SHOKU no matter what parameter we feed it.
+    fetch_kanji_data.mockResolvedValue(SHOKU);
 });
 
 //After all tests are done, close connection with DB
@@ -30,6 +56,27 @@ async function get_token(username = "api@test.com", password = "password123")
         .post("/auth/register")
         .send({username, password});
     return res.body.token;
+}
+
+//save a kanji to the database (needs token)
+async function save_shoku(token)
+{
+    await request(app)
+        .post("/kanji")
+        .set("Authorization", `Bearer ${token}`)
+        .send(SHOKU);
+
+    const {rows} = await pool.query(
+        "SELECT id FROM saved_kanji WHERE kanji = $1",
+        [SHOKU.kanji]
+    );
+    return rows[0].id;
+}
+
+async function read_card(id)
+{
+    const {rows} = await pool.query("SELECT * FROM saved_kanji WHERE id = $1", [id]);
+    return rows[0];
 }
 
 //TESTS---------------------------------------------------------------------------
@@ -583,7 +630,6 @@ describe("Input validation", () => {
     });
 });
 
-
 //Rate Limiting--------------------
 
 describe("Rate limiting", () => {
@@ -602,5 +648,325 @@ describe("Rate limiting", () => {
         //Expect status to be 429
         //express-rate-limit returns status 429 by default on rate limit trigger.
         expect(last_res.status).toBe(429);
+    });
+});
+
+//SRS------------------------------
+
+describe("GET /practice/next", () => {
+    test("returns 401 without a token", async () => {
+        
+        //send request without authentification
+        const res = await request(app)
+            .get("/practice/next");
+
+        //Expect response status 401
+        expect(res.status).toBe(401);
+    });
+
+    test("returns a due card with a prompt type", async () => {
+
+        //login, get token.
+        const token = await get_token();
+        const id = await save_shoku(token);
+
+        const res = await request(app)
+            .get("/practice/next")
+            .set("Authorization", `Bearer ${token}`);
+        const data = res.body.card;
+
+        expect(res.status).toBe(200);
+        expect(data.id).toBe(id);
+        expect(data.kanji).toBe("食");
+        expect(["reading", "meaning"]).toContain(data.prompt_type);
+
+    });
+
+    test("response does not send the accepted answer with the question", async () => {
+
+        //login, get token, add SHOKU to database.
+        const token = await get_token();
+        const id = await save_shoku(token);
+
+        const res = await request(app)
+            .get("/practice/next")
+            .set("Authorization", `Bearer ${token}`);
+
+        //stringify body to be able to scan it at once
+        const body = JSON.stringify(res.body);
+        expect(body).not.toContain("ショク");
+        expect(body).not.toContain("た.べる");
+        expect(body).not.toContain("eat");
+
+    });
+
+    test("returns card: null and the next due date when nothing is due", async () => {
+
+        //login, get token, add a kanji to db, get its id
+        const token = await get_token();
+        const id = await save_shoku(token);
+
+        //update due date so that it is not yet due
+        await pool.query(
+            "UPDATE saved_kanji SET next_review = NOW() + INTERVAL '5 hours' WHERE id = $1",
+            [id]
+        );
+        
+        //send request
+        const res = await request(app)
+            .get("/practice/next")
+            .set("Authorization", `Bearer ${token}`)
+
+        expect(res.status).toBe(200);
+        expect(res.body.card).toBeNull();
+        expect(res.body.next_due_at).toBeDefined();
+        expect(new Date(res.body.next_due_at).getTime()).toBeGreaterThan(Date.now());
+    });
+
+    test("returns card: null with no next due date if user has no saved kanji", async () => {
+
+        //login, get token
+        const token = await get_token();
+
+        //send request without adding a kanji to db
+        const res = await request(app)
+            .get("/practice/next")
+            .set("Authorization", `Bearer ${token}`)
+
+        //"card" and "next_due_at" should be null
+        expect(res.status).toBe(200);
+        expect(res.body.card).toBeNull();
+        expect(res.body.next_due_at).toBeNull();
+    });
+
+    test("returns most overdue card first", async () => {
+
+        //login, get token, save shoku kanji
+        const token = await get_token();
+
+        //save "water" kanji first, becomes most overdue element
+        await request(app)
+            .post("/kanji")
+            .set("Authorization", `Bearer ${token}`)
+            .send({
+                kanji: "水",
+                on_readings: ["スイ"],
+                kun_readings: ["みず"],
+                meanings: ["water"],
+                jlpt: 5,
+                saved_at: Date.now(),                
+            });
+
+        //then save shoku, becomes second in line
+        const shoku_id = await save_shoku(token);
+
+        //request next overdue kanji
+        const res = await request(app)
+            .get("/practice/next")
+            .set("Authorization", `Bearer ${token}`);
+
+        //should expect "water" to be in response
+        expect(res.status).toBe(200);
+        expect(res.body.card.id).not.toBe(shoku_id);
+        expect(res.body.card.kanji).toBe("水");
+    });
+
+    test("does not serve another user's cards", async () => {
+
+        //create owner and other user's account, get token.
+        const owner = await get_token("ownerUser", "password123");
+        const other = await get_token("otherUser", "password123");
+
+        //save shoku using owner's token
+        await save_shoku(owner);
+
+        //request next from other user's account
+        const res = await request(app)
+            .get("/practice/next")
+            .set("Authorization", `Bearer ${other}`);
+
+        //expect null card and next_due_at
+        expect(res.status).toBe(200);
+        expect(res.body.card).toBeNull();
+        expect(res.body.next_due_at).toBeNull();
+    });
+});
+
+//Reviewing------------------------
+
+describe("POST /practice/:id/review", () => {
+    test("returns 401 without a token", async () => {
+
+        //send a request without attaching a token to it.
+        const res = await request(app)
+            .post("/practice/1/review")
+            .send({answer: "eat", prompt_type: "meaning"});
+
+        expect(res.status).toBe(401);
+        expect(res.body.error).toBeDefined();
+    });
+
+    test("grades a correct meaning and increases mastery level", async () => {
+
+        //get token, then kanji entry id
+        const token  = await get_token();
+        const id = await save_shoku(token);
+
+        //send request to review whether the "meaning" of SHOKU is "eat"
+        const res = await request(app)
+            .post(`/practice/${id}/review`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({answer: "eat", prompt_type: "meaning"});
+
+        expect(res.status).toBe(200);
+        expect(res.body.correct).toBe(true);
+        expect(res.body.mastery_level).toBe(1);
+        expect(res.body.next_review).toBeDefined();
+
+        //check that the database actually updated, not just the response.
+        const card = await read_card(id);
+        expect(card.mastery_level).toBe(1);
+        expect(card.times_correct).toBe(1);
+        expect(card.times_incorrect).toBe(0);
+        expect(new Date(card.next_review).getTime()).toBeGreaterThan(Date.now());
+    });
+
+    test("grades a wrong answer and increases times_incorrect", async () => {
+
+        //get token, save shoku kanji, get entry id
+        const token  = await get_token();
+        const id = await save_shoku(token);
+
+        const res = await request(app)
+            .post(`/practice/${id}/review`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({answer: "drink", prompt_type: "meaning"});
+
+        expect(res.body.correct).toBe(false);
+
+        const card = await read_card(id);
+        expect(card.mastery_level).toBe(0);
+        expect(card.times_incorrect).toBe(1);
+    });
+
+    test("accepts a reading typed in romaji", async () => {
+
+        //get token, save shoku, get entry id
+        const token  = await get_token();
+        const id = await save_shoku(token);
+
+        const res = await request(app)
+            .post(`/practice/${id}/review`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({answer: "taberu", prompt_type: "reading"});
+
+        expect(res.body.correct).toBe(true);
+    });
+
+    test("accepts a reading typed in katakana", async () => {
+
+        //get token, save shoku, get entry id
+        const token = await get_token();
+        const id = await save_shoku(token);
+
+        const res = await request(app)
+            .post(`/practice/${id}/review`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({answer: "ショク", prompt_type: "reading"});
+
+        expect(res.body.correct).toBe(true);
+    });
+
+    test("accepts a reading typed in hiragana", async () => {
+
+        const token = await get_token();
+        const id = await save_shoku(token);
+
+        //send a request containing a valid hiragana reading
+        const res = await request(app)
+            .post(`/practice/${id}/review`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({answer: "たべる", prompt_type: "reading"});
+
+        expect(res.body.correct).toBe(true);
+    });
+
+    test("accepts any of the listed meanings", async () => {
+
+        const token = await get_token();
+        const id = await save_shoku(token);
+
+        //send a request containing a valid meaning
+        const res = await request(app)
+            .post(`/practice/${id}/review`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({answer: "eat", prompt_type: "meaning"});
+
+        //expect correct response
+        expect(res.body.correct).toBe(true);
+    });
+
+    test("returns accepted answers after grading", async () => {
+
+        const token = await get_token();
+        const id = await save_shoku(token);
+
+        //send an invalid answer
+        const res = await request(app)
+            .post(`/practice/${id}/review`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({answer: "wrong", prompt_type: "meaning"});
+
+        //expect response to contain expected answers
+        expect(res.body.accepted_answers).toContain("eat");
+    });
+
+    test("returns 404 for another user's kanji", async () => {
+
+        //Create two accounts for two distinct users
+        const owner = await get_token("ownerUser123", "password123");
+        const other = await get_token("otherUser234", "password123");
+
+        //save shoku with owner's token
+        const id = await save_shoku(owner);
+
+        //attempt to review shoku with other user's credentials
+        const res = await request(app)
+            .post(`/practice/${id}/review`)
+            .set("Authorization", `Bearer ${other}`)
+            .send({answer: "eat", prompt_type: "meaning"});
+
+        //expect a 404 status
+        expect(res.status).toBe(404);
+    });
+
+    test("review on one user's kanji does not affect another user's identical entry", async () => {
+
+        //Create two accounts for two distinct users
+        const owner = await get_token("ownerUser123", "password123");
+        const other = await get_token("otherUser234", "password123");
+
+        //save shoku with both accounts
+        const ownerId = await save_shoku(owner);
+        const otherId = await save_shoku(other);
+
+        //send request with valid answer using owner's id
+        await request(app)
+            .post(`/practice/${ownerId}/review`)
+            .set("Authorization", `Bearer ${owner}`)
+            .send({answer: "eat", prompt_type: "meaning"});
+
+        //send request with valid answer using owner's id
+        await request(app)
+            .post(`/practice/${otherId}/review`)
+            .set("Authorization", `Bearer ${other}`)
+            .send({answer: "wrong", prompt_type: "meaning"});
+
+        const ownerCard = await read_card(ownerId);
+        const otherCard = await read_card(otherId);
+
+        //expect owner to have advanced to mastery 1, other to still be at 0
+        expect(ownerCard.mastery_level).toBe(1);
+        expect(otherCard.times_incorrect).toBe(0);
     });
 });

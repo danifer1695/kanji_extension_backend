@@ -33,6 +33,7 @@ app.get("/health", (req, res) => {
 //get the "/kanji" route so we can access the endpoints defined in kanji.js
 app.use("/auth", auth_limiter, require("./routes/auth"));
 app.use("/kanji", api_limiter, require("./routes/kanji"));
+app.use("/practice", api_limiter, require("./routes/practice"));
 
 //----------------------------------------------------------------------------
 

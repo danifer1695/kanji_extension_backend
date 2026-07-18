@@ -28,7 +28,9 @@ const next_practice = async (req, res) => {
                     WHERE user_id = $1`,
                 [req.user.id]
             );
-            return res.status(200).json({card: null, next_due_at: upcoming[0].next });
+
+            //return null if no results are returned (db empty)
+            return res.status(200).json({card: null, next_due_at: (upcoming.length != 0) ? upcoming[0].next : null });
         }
 
         const card = rows[0];
@@ -53,6 +55,8 @@ const next_practice = async (req, res) => {
 };
 
 //POST/practice/:id/review
+//Expects: an answer and a prompt type ("meaning" or "reading") to the entry with 
+//an id matching the one included in the request's parameter.
 //retrieves the user's response to a practice question, determines whether it is correct
 //or not, then modifies the mastery level / review due dates accordingly.
 const practice_submit_review = async (req, res) => 
@@ -65,6 +69,7 @@ const practice_submit_review = async (req, res) =>
     try
     {
         await client.query("BEGIN");
+        const paramId = parseInt(req.params.id, 10);
 
         //FOR UPDATE locks the row so that two requests from differenc clients (extension + phone)
         //cannot both read & write at the same time.
@@ -72,7 +77,7 @@ const practice_submit_review = async (req, res) =>
             `SELECT * FROM saved_kanji
                 WHERE id = $1 AND user_id = $2
                 FOR UPDATE`,
-            [req.params.id, req.user.id]
+            [paramId, req.user.id]
         );
 
         //if query result is empty, return response status !ok with error message
