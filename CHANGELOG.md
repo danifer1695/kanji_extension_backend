@@ -20,3 +20,4 @@
 
 ## [0.2.0] - 2026-7-15
 - Implemented SRS (Spaced Repetition System)
+- Test suite for practice endpoints implemented.
