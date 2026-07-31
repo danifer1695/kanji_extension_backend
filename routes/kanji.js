@@ -8,7 +8,8 @@ const {
     collection_size,
     save_kanji, 
     remove_kanji, 
-    kanji_from_reading
+    kanji_from_reading,
+    get_mastery
 } = require("../controllers/kanji");
 
 const {
@@ -30,6 +31,9 @@ router.get("/", fetch_all_kanji);
 //GET /kanji/contains?kanji=[...] - checks whether database contains a specific kanji or not.
 router.get("/contains", validate_query(single_kanji_schema), contains_kanji);
  
+//GET /kanji/
+router.get("/mastery", validate_query(single_kanji_schema), get_mastery);
+
 //GET /kanji/size - returns the amount of kanji saved by this user.
 router.get("/size", collection_size);
 

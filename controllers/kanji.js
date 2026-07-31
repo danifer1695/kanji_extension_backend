@@ -42,6 +42,30 @@ const contains_kanji = async (req, res) => {
     }
     
 };
+
+//GET/kanji/mastery?kanji=食
+//retrieve a given kanji's mastery level for current user
+const get_mastery = async (req, res) => {
+    //get kanji from request query
+    const { kanji } = req.query;
+
+    //query database
+    try
+    {
+        const result = await pool.query(`
+            SELECT mastery_level FROM saved_kanji WHERE kanji = $1 AND user_id = $2`,
+            [kanji, req.user.id]
+        );
+
+        //Return mastery level
+        //returns "{mastery_level: X}"
+        res.status(200).json(result.rows[0]);
+    }
+    catch(e)
+    {
+        res.status(500).json({error: e.message});
+    }
+}
  
 //returns the amount of kanji saved by this user.
 const collection_size = async (req, res) => {
@@ -126,9 +150,6 @@ const kanji_from_reading = async (req, res) => {
     }
 };
 
-//module.export will export the behaviour written in this script when this route is called using require()
-module.exports = {fetch_all_kanji, contains_kanji, collection_size, save_kanji, remove_kanji, kanji_from_reading};
-
 //Helpers----------------------------------------------------------------------------------------
 //Fetches kanji list from kanjiapi.dev from input romaji, hira or katakana.
 async function fetch_kanji_for_query(query)
@@ -172,3 +193,16 @@ async function fetch_kanji_for_query(query)
     //merge lists and remove duplicates
     return [...new Set([...kanji_hira, ...kanji_kata])];
 }
+
+//module.export will export the behaviour written in this script when this route is called using require()
+module.exports = {
+    fetch_all_kanji, 
+    contains_kanji, 
+    collection_size, 
+    save_kanji, 
+    remove_kanji, 
+    kanji_from_reading,
+    get_mastery,
+};
+
+

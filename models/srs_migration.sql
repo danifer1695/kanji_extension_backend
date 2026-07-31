@@ -4,7 +4,7 @@ ALTER TABLE saved_kanji
     ADD COLUMN times_correct INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN times_incorrect INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN last_reviewed TIMESTAMPTZ,
-    ADD COLUMN next_review TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ADD COLUMN next_review TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     ADD CONSTRAINT mastery_level_range CHECK (mastery_level BETWEEN 0 AND 8);
 

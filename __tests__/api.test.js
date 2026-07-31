@@ -792,6 +792,46 @@ describe("GET /practice/next", () => {
     });
 });
 
+//Get mastery ---------------------
+
+describe("GET /kanji/mastery?kanji=X", () => {
+    test("return mastery level 0 for a new card", async () => {
+        
+        //get token, save shoku to db using that token, get shoku's id
+        const token = await get_token();
+        await save_shoku(token);
+
+        //send request for mastery level
+        const res = await request(app)
+            .get("/kanji/mastery?kanji=食")
+            .set("Authorization", `Bearer ${token}`);
+
+        //expect mastery level 0
+        expect(res.status).toBe(200);
+        expect(res.body.mastery_level).toEqual(0);
+    });
+
+    test("returns mastery level 1 after one correct answer", async () => {
+
+        //create account, get token, save shoku, get id"
+        const token = await get_token();
+        const id = await save_shoku(token);
+
+        //send review with correct answer
+        await request(app)
+            .post(`/practice/${id}/review`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({answer: "eat", prompt_type: "meaning"});
+
+        //request mastery level
+        const res = await request(app)
+            .get('/kanji/mastery?kanji=食')
+            .set("Authorization", `Bearer ${token}`);
+
+        //expect a mastery level of 1
+        expect(res.body.mastery_level).toBe(1);
+    })
+})
 //Reviewing------------------------
 
 describe("POST /practice/:id/review", () => {
