@@ -6,7 +6,8 @@ const {
     validate, 
     register_schema, 
     login_schema, 
-    change_password_schema
+    change_password_schema,
+    email_schema
 } = require("../middleware/validate");
 
 const {
@@ -14,6 +15,7 @@ const {
     login_account,
     change_password,
     delete_account,
+    add_email,
 } = require("../controllers/auth.js");
 
 const auth_guard = require("../middleware/auth.js");
@@ -23,6 +25,9 @@ router.post("/register", validate(register_schema), register_account);
 
 //POST /auth/login
 router.post("/login", validate(login_schema), login_account);
+
+//PATCH /auth/email
+router.patch('/email', auth_guard, validate(email_schema), add_email)
 
 //PUT /auth/password - change password
 router.put("/password", auth_guard, validate(change_password_schema), change_password);

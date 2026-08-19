@@ -16,6 +16,10 @@ const single_kanji_schema = z.object({
     kanji: z.string().regex(/^[\u4e00-\u9fff]$/, "Kanji must be a single CJK character."),
 })
 
+const email_schema = z.object({
+    email: z.email().trim().toLowerCase()
+})
+
 //maje sure kanji field contains a kanji character (within the unicode CJK character range)
 const kanji_schema = z.object({
     kanji: z.string().regex(/^[\u4e00-\u9fff]$/, "Kanji must be a single CJK character."),
@@ -78,6 +82,7 @@ module.exports = {
     register_schema, 
     login_schema, 
     kanji_schema, 
+    email_schema,
     single_kanji_schema, 
     change_password_schema,
     practice_submit_schema,

@@ -234,6 +234,29 @@ describe("PUT /auth/password", () => {
     });
 });
 
+describe("PATCH /auth/email", () => {
+    test('successfully adds a valid email to an existing account', async () => {
+        //create account, get token
+        const token  = await get_token('user', 'password123');
+
+        //send request to add email to database
+        const res = await request(app)
+            .patch('/auth/email')
+            .set('Authorization', `Bearer ${token}`)
+            .send({email: 'email.test@email.com'})
+
+        //query the database to see if email was indeed saved
+        const rows = await pool.query(
+            `SELECT email FROM users WHERE username = $1`,
+            ['user']
+        )
+        //expect a good response containing the email
+        expect(res.status).toBe(200)
+        expect(res.body).toBeDefined()
+        expect(rows.rows[0].email).toBe('email.test@email.com')
+    })
+})
+
 describe("DELETE /auth/account", () => {
     test("deletes an account and all of its saved kanji", async () => {
         //Create account, get token.

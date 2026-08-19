@@ -44,6 +44,37 @@ const register_account = async (req, res) => {
     }
 };
 
+//PATCH/auth/email
+//Add a user's email to the database
+const add_email = async (req, res) => {
+    
+    //DEBUGGING====================
+    //console.log(req.body)
+    //console.log(req.user)
+    //=============================
+
+    //get username from request body (appended by auth_guard)
+    const { email } = req.body;
+
+    //add email to database
+    try {
+        await pool.query(
+            "UPDATE users SET email = $1 WHERE id = $2",
+            [email, req.user.id])
+
+        //return ok status
+        res.status(200).json({email: email});
+
+    } catch(e) {
+        //catch specific error code for a 'UNIQUE' constraint violation
+        if(e.code === '23505') return res.status(409).json({error: 'Email already in use'})
+
+        //else return generic 500 error
+        console.error(e)
+        res.status(500).json({error: e.message})
+    }
+}
+
 //When a client successfully logs in, this function returns a token.
 //the client will then attach this token to every future request requiring authentification so that the server knows to 
 //let that request pass.
@@ -70,7 +101,7 @@ const login_account = async (req, res) => {
         //If the client provided valid credentials, we encode and attach a token to the response,
         //which the client will use to validate future requests.
         const token = jwt.sign(
-            {id: user.id, username: user.username},
+            {id: user.id, username: user.username, email: user.email},
             process.env.JWT_SECRET,
             {expiresIn: process.env.JWT_EXPIRES_IN}
         );
@@ -158,4 +189,4 @@ const delete_account = async (req, res) => {
 
 //-------------------------------------------------------------------------------------------------
 
-module.exports = {register_account, login_account, delete_account, change_password};
+module.exports = {register_account, login_account, delete_account, change_password, add_email};
