@@ -44,9 +44,28 @@ const register_account = async (req, res) => {
     }
 };
 
-//PATCH/auth/email
-//Add a user's email to the database
-const add_email = async (req, res) => {
+//GET/auth/me
+//Return non-critical user info
+const get_me = async (req, res) => {
+
+    //query user infor from database
+    try {
+        const data = await pool.query(
+            "SELECT username, email FROM users WHERE id = $1",
+            [req.user.id])
+
+        return res.status(200).json(data.rows[0])
+    }
+    catch(e)
+    {
+        return res.status(500).json({error: e.message})
+    }
+}
+
+//PATCH/auth/me
+//update a user's info in the database
+//Info that cannot be updated: username, id
+const update_me = async (req, res) => {
     
     //DEBUGGING====================
     //console.log(req.body)
@@ -63,7 +82,7 @@ const add_email = async (req, res) => {
             [email, req.user.id])
 
         //return ok status
-        res.status(200).json({email: email});
+        res.status(200).json();
 
     } catch(e) {
         //catch specific error code for a 'UNIQUE' constraint violation
@@ -189,4 +208,4 @@ const delete_account = async (req, res) => {
 
 //-------------------------------------------------------------------------------------------------
 
-module.exports = {register_account, login_account, delete_account, change_password, add_email};
+module.exports = {register_account, login_account, delete_account, change_password, update_me, get_me};

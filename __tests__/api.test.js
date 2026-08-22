@@ -234,28 +234,108 @@ describe("PUT /auth/password", () => {
     });
 });
 
-describe("PATCH /auth/email", () => {
+describe('GET /auth/me', () => {
+    test('user information properly retrieved', async () => {
+        //create an account, save token
+        const token = await get_token('user', 'password123')
+
+        //add email to database
+        try
+        {
+            await pool.query(
+                "UPDATE users SET email= 'email@email.com' WHERE username = $1",
+                ['user'])
+        } 
+        catch (e)
+        {
+            console.error(e.message)    
+        }
+                //request user data
+        const res  = await request(app)
+            .get('/auth/me')
+            .set('Authorization', `Bearer ${token}`)
+
+        //DEBUGGING==============================
+        if(!res.ok) console.error(res.error)
+        //=======================================
+
+        //check on results
+        expect(res.status).toBe(200)
+        expect(res.body.email).toBe('email@email.com')
+        expect(res.body.username).toBe('user')
+    });
+
+    test('error on missing token from request', async () => {
+        //create an account, dont get token
+        await get_token('user')
+        
+        //add email to database
+        try
+        {
+            await pool.query(
+                "UPDATE users SET email= 'email@email.com' WHERE username = $1",
+                ['user'])
+        } 
+        catch (e) { console.error(e.message) }
+
+        //send request without attaching a token
+        const res = await request(app)
+            .get('/auth/me')
+
+        //expect invalid status 401
+        expect(res.status).toBe(401)
+    })
+});
+
+describe("PATCH /auth/me", () => {
     test('successfully adds a valid email to an existing account', async () => {
         //create account, get token
         const token  = await get_token('user', 'password123');
 
         //send request to add email to database
         const res = await request(app)
-            .patch('/auth/email')
+            .patch('/auth/me')
             .set('Authorization', `Bearer ${token}`)
-            .send({email: 'email.test@email.com'})
+            .send({
+                username: 'user',
+                email: 'email.test@email.com'})
 
         //query the database to see if email was indeed saved
         const rows = await pool.query(
             `SELECT email FROM users WHERE username = $1`,
             ['user']
         )
+
+        //DEBUGGING==============================
+        //Print any errors
+        if(!res.ok) console.error(res.body.error)
+        //=======================================
+
         //expect a good response containing the email
         expect(res.status).toBe(200)
-        expect(res.body).toBeDefined()
         expect(rows.rows[0].email).toBe('email.test@email.com')
-    })
-})
+    });
+
+    test('zod returns error when attempting to save an invalid email', async () => {
+        //create account, get token
+        const token = await get_token('user')
+
+        //send request to add email to database
+        const res = await request(app)
+            .patch('/auth/me')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                username: 'user',
+                email: 'InvalidEmail'
+            })
+
+        //expect response to not be ok. Zod returns a status code 
+        //of 400 on invalid input
+        expect(res.ok).toBe(false)
+        expect(res.status).toBe(400)
+    });
+
+});
 
 describe("DELETE /auth/account", () => {
     test("deletes an account and all of its saved kanji", async () => {
